@@ -14,8 +14,8 @@ torchrun --nproc_per_node=4 --nnodes=1 --node_rank=0 --master_addr="localhost" -
   --output_dir="path/StableAvatar/output_infer" \
   --validation_prompts="A middle-aged woman with short light brown hair, wearing pearl earrings and a blue blazer, is speaking passionately in front of a blurred background resembling a government building. Her mouth is open mid-phrase, her expression is engaged and energetic, and the lighting is bright and even, suggesting a television interview or live broadcast. The scene gives the impression she is singing with conviction and purpose." \
   --seed=42 \
-  --ulysses_degree=2 \
-  --ring_degree=2 \
+  --ulysses_degree=4 \
+  --ring_degree=1 \
   --motion_frame=25 \
   --sample_steps=50 \
   --width=512 \
