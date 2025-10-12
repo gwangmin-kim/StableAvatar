@@ -21,6 +21,7 @@ torchrun --nproc_per_node=4 --nnodes=1 --node_rank=0 --master_addr="localhost" -
   --width=512 \
   --height=512 \
   --fsdp_dit \
+  --t5_fsdp \
   --overlap_window_length=10 \
   --sample_text_guide_scale=3.0 \
   --sample_audio_guide_scale=5.0

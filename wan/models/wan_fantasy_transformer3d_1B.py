@@ -539,6 +539,18 @@ class WanI2VTalkingCrossAttention(WanSelfAttention):
             context_lens(Tensor): Shape [B]
         """
 
+        # Check if we're in multi-GPU mode
+        try:
+            sp_world_size = get_sequence_parallel_world_size() if get_sequence_parallel_world_size is not None else 1
+            sp_world_rank = get_sequence_parallel_rank() if get_sequence_parallel_rank is not None else 0
+        except (AssertionError, AttributeError):
+            # Parallel group not initialized, we're in single GPU mode
+            sp_world_size = 1
+            sp_world_rank = 0
+
+        if sp_world_size > 1:
+            sp_group = get_sp_group()
+            x = sp_group.all_gather(x, dim=1)
         # print(f"The size of x in cross attention: {x.size()}")  # [1, 21504, 5120]
         # print(f"The size of context_clip in cross attention: {context_img.size()}")  # [1, 257, 5120]
         context_img = context[:, :257]
@@ -602,6 +614,11 @@ class WanI2VTalkingCrossAttention(WanSelfAttention):
 
         x = x + img_x + vocal_x
         x = self.o(x)
+
+        if sp_world_size > 1:
+            # 按原始的分片大小重新chunk
+            x = torch.chunk(x, sp_world_size, dim=1)[sp_world_rank]
+            
         return x
 
 

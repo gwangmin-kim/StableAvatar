@@ -507,8 +507,13 @@ def main():
     if args.ulysses_degree > 1 or args.ring_degree > 1:
         transformer3d.enable_multi_gpus_inference()
         if args.fsdp_dit:
+            print("Using FSDP for DiT")
             shard_fn = partial(shard_model, device_id=device, param_dtype=weight_dtype)
             pipeline.transformer = shard_fn(pipeline.transformer)
+        if args.t5_fsdp:
+            print("Using FSDP for T5")
+            shard_fn = partial(shard_model, device_id=device, param_dtype=weight_dtype)
+            pipeline.text_encoder = shard_fn(pipeline.text_encoder)
 
     if args.GPU_memory_mode == "sequential_cpu_offload":
         replace_parameters_by_name(transformer3d, ["modulation", ], device=device)
@@ -550,7 +555,6 @@ def main():
             guidance_scale=6.0,
             generator=generator,
             num_inference_steps=args.sample_steps,
-
             video=input_video,
             mask_video=input_video_mask,
             clip_image=clip_image,
