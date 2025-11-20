@@ -1,0 +1,6 @@
+checkpoints/
+outputs/
+wandb/
+logs/
+*.pt
+*.ckpt
