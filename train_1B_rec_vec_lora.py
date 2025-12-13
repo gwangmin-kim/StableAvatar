@@ -521,7 +521,7 @@ def parse_args():
     parser.add_argument(
         "--validation_steps",
         type=int,
-        default=2000,
+        default=0,
         help="Run validation every X steps.",
     )
     parser.add_argument(
@@ -1420,7 +1420,7 @@ def main():
                         torch.save(unwrap_lora_network_state_dict, lora_network_saved_path)
                         print(f"Saved transformer to {lora_network_saved_path}")
 
-                if accelerator.is_main_process:
+                if accelerator.is_main_process and args.validation_steps > 0:
                     if global_step % args.validation_steps == 0:
                         torch.cuda.empty_cache()
                         log_validation(vae=vae,

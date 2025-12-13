@@ -1,0 +1,27 @@
+export TOKENIZERS_PARALLELISM=false
+DIR="/data/workspace/StableAvatar"
+LORA_DIR="output_1B_rec_vec_lora_dir/checkpoint-20000/lora-checkpoint-20000.pt"
+
+CUDA_VISIBLE_DEVICES=0 python "$DIR/inference.py" \
+    --config_path="$DIR/deepspeed_config/wan2.1/wan_civitai.yaml" \
+    --pretrained_model_name_or_path="$DIR/checkpoints/Wan2.1-Fun-V1.1-1.3B-InP" \
+    --pretrained_wav2vec_path="$DIR/checkpoints/wav2vec2-base-960h" \
+    --transformer_path="$DIR/checkpoints/StableAvatar-1.3B/transformer3d-square.pt" \
+    --lora_path="$DIR/$LORA_DIR" \
+    --validation_reference_path="/data/workspace/intermediate/face.png" \
+    --validation_driven_audio_path="/data/workspace/intermediate/voice.wav" \
+    --validation_prompts="A young man looking straight at the camera with a calm and neutral expression." \
+    --output_dir="/data/output" \
+    --seed=42 \
+    --ulysses_degree=1 \
+    --ring_degree=1 \
+    --motion_frame=30 \
+    --sample_steps=50 \
+    --width=832 \
+    --height=480 \
+    --overlap_window_length=10 \
+    --clip_sample_n_frames=81 \
+    --GPU_memory_mode="model_full_load" \
+    --sample_text_guide_scale=5.0 \
+    --sample_audio_guide_scale=5.0 \
+    --input_perturbation=0.05

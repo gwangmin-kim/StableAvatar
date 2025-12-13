@@ -1,6 +1,8 @@
 checkpoints/
-outputs/
+output_*/
+validation/
 wandb/
 logs/
+wan/
 *.pt
 *.ckpt

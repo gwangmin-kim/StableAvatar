@@ -49,6 +49,7 @@ from wan.utils.discrete_sampler import DiscreteSampling
 from wan.utils.fp8_optimization import replace_parameters_by_name, convert_weight_dtype_wrapper, \
     convert_model_weight_to_float8
 from wan.utils.utils import get_image_to_video_latent, save_videos_grid
+from wan.utils.lora_utils import create_network
 
 def save_video_ffmpeg(gen_video_samples, save_path, vocal_audio_path, fps=25, quality=10):
     def save_video(frames, save_path, fps, quality=9, ffmpeg_params=None, saved_frames_dir=None):
@@ -252,6 +253,12 @@ def parse_args():
         type=str,
         default=None,
         help="The path to the Wan checkpoint directory.")
+    parser.add_argument(
+        "--lora_path",
+        type=str,
+        default=None,
+        help="Path to LoRA weight file (e.g., lora-checkpoint-2000.pt)."
+    )
     parser.add_argument(
         "--revision",
         type=str,
@@ -488,6 +495,25 @@ def main():
         state_dict = state_dict["state_dict"] if "state_dict" in state_dict else state_dict
         m, u = transformer3d.load_state_dict(state_dict, strict=False)
         print(f"missing keys: {len(m)}, unexpected keys: {len(u)}")
+
+    if args.lora_path is not None:
+        print(f"Loading LoRA weights from: {args.lora_path}")
+        lora_network = create_network(
+            1.0,        # multiplier (학습 때 1.0)
+            128,        # rank (train_1B_rec_vec_lora.py의 args.rank)
+            64,         # network_alpha (args.network_alpha)
+            transformer3d,
+            neuron_dropout=None,
+            TRANSFORMER_TARGET_REPLACE_MODULE="WanTransformer3DFantasyModel",
+        )
+        # transformer3d에 LoRA 모듈 주입
+        lora_network.apply_to(transformer3d, True)
+        # 학습된 LoRA weight 로드
+        lora_network.load_weights(args.lora_path)
+        # LoRA 파라미터도 transformer가 올라갈 device로 이동
+        lora_network.to(device)
+        print("LoRA successfully loaded and applied to transformer3d.")
+    
     Choosen_Scheduler = scheduler_dict = {
         "Flow": FlowMatchEulerDiscreteScheduler,
     }[sampler_name]
