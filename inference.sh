@@ -1,17 +1,40 @@
-export TOKENIZERS_PARALLELISM=false
-DIR="/data/workspace/StableAvatar"
-LORA_DIR="output_1B_rec_vec_lora_dir/checkpoint-20000/lora-checkpoint-20000.pt"
+#!/usr/bin/env bash
+set -e
 
-CUDA_VISIBLE_DEVICES=0 python "$DIR/inference.py" \
-    --config_path="$DIR/deepspeed_config/wan2.1/wan_civitai.yaml" \
-    --pretrained_model_name_or_path="$DIR/checkpoints/Wan2.1-Fun-V1.1-1.3B-InP" \
-    --pretrained_wav2vec_path="$DIR/checkpoints/wav2vec2-base-960h" \
-    --transformer_path="$DIR/checkpoints/StableAvatar-1.3B/transformer3d-square.pt" \
-    --lora_path="$DIR/$LORA_DIR" \
-    --validation_reference_path="/data/workspace/intermediate/face.png" \
-    --validation_driven_audio_path="/data/workspace/intermediate/voice.wav" \
+if [ "$#" -ne 3 ]; then
+  echo "Usage: $0 <image_path> <audio_path> <output_dir>"
+  exit 1
+fi
+
+IMAGE="$1"
+AUDIO="$2"
+OUTPUT_DIR="$3"
+
+ROOT="/data"
+REPO="$ROOT/workspace/StableAvatar"
+INTERMEDIATE="$ROOT/workspace/intermediate"
+mkdir -p $INTERMEDIATE
+
+# crop image
+python "$REPO/crop_image.py" \
+    --input_image="$IMAGE" \
+    --output_dir="$INTERMEDIATE"
+
+# inference video
+export TOKENIZERS_PARALLELISM=false
+REF_IMAGE="$INTERMEDIATE/face.png"
+DRIVEN_AUDIO="$INTERMEDIATE/audio.wav"
+
+CUDA_VISIBLE_DEVICES=0 python "$REPO/inference.py" \
+    --config_path="$REPO/deepspeed_config/wan2.1/wan_civitai.yaml" \
+    --pretrained_model_name_or_path="$REPO/checkpoints/Wan2.1-Fun-V1.1-1.3B-InP" \
+    --pretrained_wav2vec_path="$REPO/checkpoints/wav2vec2-base-960h" \
+    --transformer_path="$REPO/checkpoints/StableAvatar-1.3B/transformer3d-square.pt" \
+    --lora_path="$REPO/checkpoints/lora.pt" \
+    --validation_reference_path="$REF_IMAGE" \
+    --validation_driven_audio_path="$DRIVEN_AUDIO" \
     --validation_prompts="A young man looking straight at the camera with a calm and neutral expression." \
-    --output_dir="/data/output" \
+    --output_dir="$INTERMEDIATE" \
     --seed=42 \
     --ulysses_degree=1 \
     --ring_degree=1 \
@@ -25,3 +48,8 @@ CUDA_VISIBLE_DEVICES=0 python "$DIR/inference.py" \
     --sample_text_guide_scale=5.0 \
     --sample_audio_guide_scale=5.0 \
     --input_perturbation=0.05
+
+# combine with audio
+ffmpeg -y -i "$INTERMEDIATE/video_without_audio.mp4" -i "$DRIVEN_AUDIO" \
+  -c:v copy -c:a aac -shortest "$OUTPUT_DIR/video.mp4"
+# rm "$INTERMEDIATE/video_without_audio.mp4"
