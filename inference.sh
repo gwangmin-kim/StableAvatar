@@ -1,14 +1,36 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-if [ "$#" -ne 3 ]; then
-  echo "Usage: $0 <image_path> <audio_path> <output_dir>"
+# default steps
+SAMPLE_STEPS=50
+
+usage() {
+  echo "Usage: $0 <image_path> <audio_path> <output_dir> [--steps N]"
   exit 1
+}
+
+if [ "$#" -lt 3 ]; then
+  usage
 fi
 
 IMAGE="$1"
 AUDIO="$2"
 OUTPUT_DIR="$3"
+shift 3
+
+# optional args 파싱
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --steps)
+      SAMPLE_STEPS="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1"
+      usage
+      ;;
+  esac
+done
 
 ROOT="/data"
 REPO="$ROOT/workspace/StableAvatar"
@@ -20,10 +42,23 @@ python "$REPO/crop_image.py" \
     --input_image="$IMAGE" \
     --output_dir="$INTERMEDIATE"
 
+PREPROC_JSON="$INTERMEDIATE/face_preproc.json"
+if [ ! -f "$PREPROC_JSON" ]; then
+  echo "Missing preproc json: $PREPROC_JSON"
+  exit 1
+fi
+
+WIDTH="$(python -c 'import json; import sys; d=json.load(open(sys.argv[1])); print(d["width"])' "$PREPROC_JSON")"
+HEIGHT="$(python -c 'import json; import sys; d=json.load(open(sys.argv[1])); print(d["height"])' "$PREPROC_JSON")"
+
 # inference video
+echo "[INFO] Using resolution from preproc: ${WIDTH}x${HEIGHT}"
+echo "[INFO] sample_steps: ${SAMPLE_STEPS}"
+
 export TOKENIZERS_PARALLELISM=false
 REF_IMAGE="$INTERMEDIATE/face.png"
-DRIVEN_AUDIO="$INTERMEDIATE/audio.wav"
+# DRIVEN_AUDIO="$INTERMEDIATE/audio.wav"
+DRIVEN_AUDIO=$AUDIO
 
 CUDA_VISIBLE_DEVICES=0 python "$REPO/inference.py" \
     --config_path="$REPO/deepspeed_config/wan2.1/wan_civitai.yaml" \
@@ -39,9 +74,9 @@ CUDA_VISIBLE_DEVICES=0 python "$REPO/inference.py" \
     --ulysses_degree=1 \
     --ring_degree=1 \
     --motion_frame=30 \
-    --sample_steps=50 \
-    --width=832 \
-    --height=480 \
+    --sample_steps=$SAMPLE_STEPS \
+    --width=$WIDTH \
+    --height=$HEIGHT \
     --overlap_window_length=10 \
     --clip_sample_n_frames=81 \
     --GPU_memory_mode="model_full_load" \
@@ -50,6 +85,7 @@ CUDA_VISIBLE_DEVICES=0 python "$REPO/inference.py" \
     --input_perturbation=0.05
 
 # combine with audio
+mkdir -p $OUTPUT_DIR
 ffmpeg -y -i "$INTERMEDIATE/video_without_audio.mp4" -i "$DRIVEN_AUDIO" \
   -c:v copy -c:a aac -shortest "$OUTPUT_DIR/video.mp4"
 # rm "$INTERMEDIATE/video_without_audio.mp4"
