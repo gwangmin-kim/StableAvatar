@@ -64,7 +64,6 @@ CUDA_VISIBLE_DEVICES=0 python "$REPO/inference.py" \
     --pretrained_model_name_or_path="$REPO/checkpoints/Wan2.1-Fun-V1.1-1.3B-InP" \
     --pretrained_wav2vec_path="$REPO/checkpoints/wav2vec2-base-960h" \
     --transformer_path="$REPO/checkpoints/StableAvatar-1.3B/transformer3d-square.pt" \
-    --lora_path="$REPO/checkpoints/lora.pt" \
     --validation_reference_path="$REF_IMAGE" \
     --validation_driven_audio_path="$DRIVEN_AUDIO" \
     --validation_prompts="A young man looking straight at the camera with a calm and neutral expression." \
