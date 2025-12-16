@@ -96,7 +96,7 @@ huggingface-cli download FrancisRing/StableAvatar \
   --resume-download
 huggingface-cli download FrancisRing/StableAvatar --local-dir ./checkpoints
 curl -L \
-  https://github.com/gwangmin-kim/StableAvatar/releases/download/lora-s20000/lora-checkpoint-20000.pt \
+  https://github.com/gwangmin-kim/StableAvatar/releases/download/lora-s16000/lora-checkpoint-16000.pt \
   -o ./checkpoints/lora.pt
 ```
 
